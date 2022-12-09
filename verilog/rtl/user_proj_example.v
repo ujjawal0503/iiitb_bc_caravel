@@ -68,10 +68,10 @@ module user_proj_example #(
     // IRQ
     output [2:0] irq
 );
-    wire clk;
-    wire rst;
-    wire[7:0] count;
-    wire ctrl;
+    wire Clk;
+    wire reset;
+wire[3:0] Count;
+    wire UpOrDown;
 
     wire [`MPRJ_IO_PADS-1:0] io_in;
     wire [`MPRJ_IO_PADS-1:0] io_out;
@@ -90,11 +90,11 @@ module user_proj_example #(
     assign wdata = wbs_dat_i;
 */
     // IO
-    assign io_out[35:28] = count;
+	assign io_out[35:32] = Count;
     assign io_oeb=0;
-    assign clk = wb_clk_i;
+    assign Clk = wb_clk_i;
     assign reset = wb_rst_i;
-    assign ctrl = io_in[`MPRJ_IO_PADS-9]; 
+    assign UpOrDown = io_in[`MPRJ_IO_PADS-9]; 
     
     //assign io_oeb = {(`MPRJ_IO_PADS-1){rst}};
 
@@ -122,32 +122,43 @@ module user_proj_example #(
         .la_input(la_data_in[63:32]),
         .count(count)
     );*/
-    iiitb_bidicntr dut(count,clk,ctrl,reset);
+	iiitb_bc dut(Clk,reset,UpOrDown,Count);
 
 endmodule
-module iiitb_bidicntr(count,clk,ctrl,reset);
-input clk,reset,ctrl;
-output reg [7:0] count;
-always@(posedge clk)
-begin
-if(reset==1)
-count<=0;
-else if(ctrl==1) 
-begin
-if(count == 255)
-count <= 0;
-else
-count <= count + 1;
-end
-else 
-begin
-if(count == 0)
-count <= 255;
-else
-count <= count - 1;
-end
-end
+module iiitb_bc(
+    Clk,
+    reset,
+    UpOrDown,  //high for UP counter and low for Down counter
+    Count
+    );
+
+    
+    //input ports and their sizes
+    input Clk,reset,UpOrDown;
+    //output ports and their size
+    output [3 : 0] Count;
+    //Internal variables
+    reg [3 : 0] Count = 0;  
+    
+     always @(posedge(Clk) or posedge(reset))
+     begin
+        if(reset == 1) 
+            Count <= 0;
+        else    
+            if(UpOrDown == 1)   //Up mode selected
+                if(Count == 15)
+                    Count <= 0;
+                else
+                    Count <= Count + 1; //Incremend Counter
+            else  //Down mode selected
+                if(Count == 0)
+                    Count <= 15;
+                else
+                    Count <= Count - 1; //Decrement counter
+     end    
+    
 endmodule
+
 	
 
 `default_nettype wire
